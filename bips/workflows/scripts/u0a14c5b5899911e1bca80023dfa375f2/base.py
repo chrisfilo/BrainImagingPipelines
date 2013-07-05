@@ -718,7 +718,7 @@ def create_rest_prep(name='preproc',fieldmap=False):
                     smooth, 'inputnode.in_files')
     preproc.connect(remove_noise, 'out_file',
                     choosesusan, 'motion_files')
-    preproc.connect(compcor, 'tsnr.detrended_file',
+    preproc.connect(compcor, 'outputspec.tsnr_detrended',
                     remove_noise, 'in_file')
 
     preproc.connect(meanscale, 'out_file',

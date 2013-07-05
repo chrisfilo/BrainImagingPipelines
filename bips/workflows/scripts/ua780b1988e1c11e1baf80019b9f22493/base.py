@@ -1,4 +1,5 @@
 from bips.workflows.scripts.ua780b1988e1c11e1baf80019b9f22493.utils import (convert_affine, get_image_dimensions)
+from nipype.interfaces.ants.legacy import GenWarpFields
 
 
 def get_struct_norm_workflow(name='normalize_struct'):
@@ -54,7 +55,7 @@ def get_struct_norm_workflow(name='normalize_struct'):
         fs.model.Binarize(),
         name='create_mask')
     create_mask.inputs.min = 1
-    create_mask.inputs.dilate = 1
+    #create_mask.inputs.dilate = 1
     create_mask.inputs.out_type = 'nii'
 
     #apply mask to anatomical
@@ -64,7 +65,7 @@ def get_struct_norm_workflow(name='normalize_struct'):
 
     #use ANTS to warp the masked anatomical image to a template image
     warp_brain = pe.Node(
-        ants.GenWarpFields(),
+        GenWarpFields(),
         name='warp_brain')
 
     #collects workflow outputs
