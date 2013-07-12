@@ -150,6 +150,8 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
         ants.WarpTimeSeriesImageMultiTransform(),
         name='warp_images',
         iterfield=['input_image', 'dimension'])
+    warp_images.inputs.reference_image = "/usr/share/fsl/data/standard/MNI152_T1_2mm.nii.gz"
+
 
     #collects workflow outputs
     outputspec = pe.Node(
@@ -169,7 +171,7 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
         (inputspec, warp_images, [('moving_image', 'input_image')]),
         (inputspec, warp_images, [(('moving_image', get_image_dimensions),
                                     'dimension')]),
-        (inputspec, warp_images, [('template_file', 'reference_image'),('use_nearest','use_nearest')]),
+        (inputspec, warp_images, [('use_nearest','use_nearest')]),
         (collect_transforms, warp_images, [('out',
                                     'transformation_series')]),
         (warp_images, outputspec, [('output_image', 'warped_image')])])
@@ -233,6 +235,7 @@ def get_post_struct_norm_WIMT_workflow(name='normalize_post_struct'):
         ants.WarpImageMultiTransform(),
         name='warp_images',
         iterfield=['input_image', 'dimension'])
+    warp_images.inputs.reference_image = "/usr/share/fsl/data/standard/MNI152_T1_2mm.nii.gz"
 
     #collects workflow outputs
     outputspec = pe.Node(
@@ -252,7 +255,7 @@ def get_post_struct_norm_WIMT_workflow(name='normalize_post_struct'):
         (inputspec, warp_images, [('moving_image', 'input_image')]),
         (inputspec, warp_images, [(('moving_image', get_image_dimensions),
                                     'dimension')]),
-        (inputspec, warp_images, [('template_file', 'reference_image'),('use_nearest','use_nearest')]),
+        (inputspec, warp_images, [('use_nearest','use_nearest')]),
         (collect_transforms, warp_images, [('out',
                                     'transformation_series')]),
         (warp_images, outputspec, [('output_image', 'warped_image')])])
@@ -261,7 +264,7 @@ def get_post_struct_norm_WIMT_workflow(name='normalize_post_struct'):
 
 
 def get_full_norm_workflow(name="normalize_struct_and_post"):
-    """ Combined tructural and post-structural workflow for normalization
+    """ Combined structural and post-structural workflow for normalization
 
     Parameters
     ----------

@@ -44,7 +44,7 @@ class config(HasTraits):
     # Execution
     
     run_using_plugin = Bool(False, usedefault=True, desc="True to run pipeline with plugin, False to run serially")
-    plugin = traits.Enum("PBS", "PBSGraph","MultiProc", "SGE", "Condor",
+    plugin = traits.Enum("PBS", "PBSGraph","MultiProc", "SGE", "Condor", "CondorDAGMan",
                          usedefault=True,
                          desc="plugin to use, if run_using_plugin=True")
     plugin_args = traits.Dict({"qsub_args": "-q many"},

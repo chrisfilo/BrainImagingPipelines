@@ -464,9 +464,10 @@ Define a function to get the brightness threshold for SUSAN
             iterfield=['in_file'],
             name='applymask')
 
-    susan_smooth.connect(smooth,'smoothed_file', applymask,'in_file')
-    susan_smooth.connect(inputnode, 'mask_file', applymask, 'mask_file')
-    susan_smooth.connect(applymask, 'out_file',  outputnode, 'smoothed_files')
+#     susan_smooth.connect(smooth,'smoothed_file', applymask,'in_file')
+#     susan_smooth.connect(inputnode, 'mask_file', applymask, 'mask_file')
+#     susan_smooth.connect(applymask, 'out_file',  outputnode, 'smoothed_files')
+    susan_smooth.connect(smooth,'smoothed_file', outputnode, 'smoothed_files')
 
     return susan_smooth
 
@@ -536,7 +537,7 @@ def mod_regressor(design_file,in_file,mask):
         reg = fsl.FilterRegressor(filter_all=True)
         reg.inputs.in_file = in_file
         reg.inputs.design_file = design_file
-        reg.inputs.mask = mask
+#         reg.inputs.mask = mask
         res = reg.run()
         out_file = res.outputs.out_file
         return out_file
