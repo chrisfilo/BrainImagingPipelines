@@ -1,5 +1,5 @@
 import os
-from ..scripts.smri_base import get_post_struct_norm_workflow, get_post_struct_norm_WIMT_workflow
+from ..scripts.smri_base import get_post_struct_norm_workflow
 from ..scripts.smri_utils import warp_segments
 from ....base import MetaWorkflow, load_config, register_workflow
 from traits.api import HasTraits, Directory, Bool, Button
@@ -42,7 +42,9 @@ class config(BaseWorkflowConfig):
     do_segment = traits.Bool(True)
     surf_dir = traits.Directory()
     moving_images_4D = traits.Bool(True, usedefault=True, desc="True if your moving image inputs \
-                                         are time series images, False if they are 3-dimensional")
+are time series images, False if they are 3-dimensional")
+    original_res = traits.Bool(True, usedefault=True, desc="Keep the original resolution of the normalized files. \
+Helps to save space. Note that isotropic resolution will be used (for example 3x3x4 will be resliced to 3x3x3).")
     # Advanced Options
     use_advanced_options = traits.Bool()
     advanced_script = traits.Code()
@@ -132,6 +134,7 @@ def create_view():
                       Item(name="do_segment"),Item("use_nearest"),
                       Item(name="surf_dir", enabled_when="do_segment"),
                       Item(name="moving_images_4D"),
+                      Item(name="original_res"),
                       label='Normalization', show_border=True),
                 Group(Item(name='use_advanced_options'),
                     Item(name='advanced_script',enabled_when='use_advanced_options'),
@@ -194,10 +197,8 @@ def normalize_workflow(c):
     import nipype.pipeline.engine as pe
     import nipype.interfaces.io as nio
 
-    if c.moving_images_4D:
-        norm = get_post_struct_norm_workflow()
-    else:
-        norm = get_post_struct_norm_WIMT_workflow()
+    norm = get_post_struct_norm_workflow(timeseries = c.moving_images_4D, 
+                                         original_res = c.original_res)
     
     datagrab = c.datagrabber.create_dataflow() #func_datagrabber(c)
     #fssource = pe.Node(interface=FreeSurferSource(), name='fssource')

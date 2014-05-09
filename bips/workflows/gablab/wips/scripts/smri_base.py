@@ -1,5 +1,5 @@
 from smri_utils import (convert_affine, get_image_dimensions)
-from nipype.interfaces import c3
+from nipype.interfaces import c3, fsl
 
 
 def get_struct_norm_workflow(name='normalize_struct'):
@@ -94,8 +94,24 @@ def get_struct_norm_workflow(name='normalize_struct'):
 
     return normalize_struct
 
+def get_highest_resolution(images):
+    """Return dimensions of list of images
 
-def get_post_struct_norm_workflow(name='normalize_post_struct'):
+    Parameters
+    ----------
+    images : list of filenames
+
+    Returns
+    -------
+    list : returns dimensions of input image list
+    """
+    import nibabel as nb
+
+    res = min(nb.load(images).get_header().get_zooms())
+    return res
+
+
+def get_post_struct_norm_workflow(name='normalize_post_struct', timeseries=True, original_res=True):
     """ Base post-structural workflow for normalization
 
     Parameters
@@ -122,7 +138,6 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
     workflow : post-structural normalization workflow
     """
     #inputs to workflow
-    import nipype.interfaces.freesurfer as fs
     import nipype.interfaces.ants as ants
     import nipype.pipeline.engine as pe
     import nipype.interfaces.utility as util
@@ -144,10 +159,14 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
         name='collect_transforms')
 
     #performs series of transformations on moving images
-    warp_images = pe.MapNode(
-        ants.WarpTimeSeriesImageMultiTransform(),
-        name='warp_images',
-        iterfield=['input_image', 'dimension'])
+    if timeseries:
+        warp_images = pe.MapNode(ants.WarpTimeSeriesImageMultiTransform(),
+                                 name='warp_images',
+                                 iterfield=['input_image', 'dimension'])
+    else:
+        warp_images = pe.MapNode(ants.WarpImageMultiTransform(),
+                                 name='warp_images',
+                                 iterfield=['input_image', 'dimension'])
 
     #collects workflow outputs
     outputspec = pe.Node(
@@ -163,94 +182,27 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
         (inputspec, fsl_reg_2_itk, [('mean_func', 'source_file')]),
         (fsl_reg_2_itk, collect_transforms, [('itk_transform', 'in3')]),
         (inputspec, collect_transforms, [('warp_field', 'in1'),
-            ('affine_transformation', 'in2')]),
+                                         ('affine_transformation', 'in2')]),
         (inputspec, warp_images, [('moving_image', 'input_image')]),
         (inputspec, warp_images, [(('moving_image', get_image_dimensions),
-                                    'dimension')]),
-        (inputspec, warp_images, [('template_file', 'reference_image'),('use_nearest','use_nearest')]),
+                                   'dimension')]),
+        (inputspec, warp_images, [('use_nearest','use_nearest')]),
         (collect_transforms, warp_images, [('out',
-                                    'transformation_series')]),
+                                            'transformation_series')]),
         (warp_images, outputspec, [('output_image', 'warped_image')])])
-
-    return normalize_post_struct
-
-
-def get_post_struct_norm_WIMT_workflow(name='normalize_post_struct'):
-    """ Base post-structural workflow for normalization
-
-    Parameters
-    ----------
-    name : name of workflow. Default = 'normalize_post_struct'
-
-    Inputs
-    ------
-    inputspec.template_file :
-    inputspec.unwarped_brain :
-    inputspec.warp_field :
-    inputspec.affine_transformation :
-    inputspec.out_fsl_file :
-    inputspec.moving_image :
-    inputspec.mean_func :
-    inputspec.use_nearest:
-
-    Outputs
-    -------
-    outputspec.warped_image :
-
-    Returns
-    -------
-    workflow : post-structural normalization workflow
-    """
-    #inputs to workflow
-    import nipype.interfaces.freesurfer as fs
-    import nipype.interfaces.ants as ants
-    import nipype.pipeline.engine as pe
-    import nipype.interfaces.utility as util
-    inputspec = pe.Node(
-        util.IdentityInterface(
-            fields=['template_file', 'unwarped_brain', 'warp_field',
-                'affine_transformation', 'out_fsl_file', 'moving_image',
-                'mean_func',"use_nearest"]),
-        name='inputspec')
-
-    #makes fsl-style coregistration ANTS compatible
-    fsl_reg_2_itk = pe.Node(
-        c3.C3dAffineTool(fsl2ras=True, itk_transform=True),
-        name='fsl_reg_2_itk')
-
-    #collects series of transformations to be applied to the moving images
-    collect_transforms = pe.Node(
-        util.Merge(3),
-        name='collect_transforms')
-
-    #performs series of transformations on moving images
-    warp_images = pe.MapNode(
-        ants.WarpImageMultiTransform(),
-        name='warp_images',
-        iterfield=['input_image', 'dimension'])
-
-    #collects workflow outputs
-    outputspec = pe.Node(
-        util.IdentityInterface(
-            fields=['warped_image']),
-        name='outputspec')
-
-    #initializes and connects workflow nodes
-    normalize_post_struct = pe.Workflow(name=name)
-    normalize_post_struct.connect([
-        (inputspec, fsl_reg_2_itk, [('unwarped_brain', 'reference_file')]),
-        (inputspec, fsl_reg_2_itk, [('out_fsl_file', 'transform_file')]),
-        (inputspec, fsl_reg_2_itk, [('mean_func', 'source_file')]),
-        (fsl_reg_2_itk, collect_transforms, [('itk_transform', 'in3')]),
-        (inputspec, collect_transforms, [('warp_field', 'in1'),
-            ('affine_transformation', 'in2')]),
-        (inputspec, warp_images, [('moving_image', 'input_image')]),
-        (inputspec, warp_images, [(('moving_image', get_image_dimensions),
-                                    'dimension')]),
-        (inputspec, warp_images, [('template_file', 'reference_image'),('use_nearest','use_nearest')]),
-        (collect_transforms, warp_images, [('out',
-                                    'transformation_series')]),
-        (warp_images, outputspec, [('output_image', 'warped_image')])])
+    
+    if original_res:
+        reslice_atlas  = pe.Node(fsl.FLIRT(), name="reslice_atlas")
+        
+        normalize_post_struct.connect([
+        (inputspec, reslice_atlas, [('template_file', 'reference'), 
+                                    ('template_file', 'in_file'),
+                                    (('mean_func', get_highest_resolution), 
+                                     'apply_isoxfm')]),
+        (reslice_atlas, warp_images, [('out_file', 'reference_image')])])
+    else:
+        normalize_post_struct.connect([
+        (inputspec, warp_images, [('template_file', 'reference_image')])])
 
     return normalize_post_struct
 
