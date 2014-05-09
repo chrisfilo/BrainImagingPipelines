@@ -135,7 +135,7 @@ def get_post_struct_norm_workflow(name='normalize_post_struct'):
 
     #makes fsl-style coregistration ANTS compatible
     fsl_reg_2_itk = pe.Node(
-        c3.C3dAffineTool(fsl2ras=True),
+        c3.C3dAffineTool(fsl2ras=True, itk_transform=True),
         name='fsl_reg_2_itk')
 
     #collects series of transformations to be applied to the moving images
@@ -215,7 +215,7 @@ def get_post_struct_norm_WIMT_workflow(name='normalize_post_struct'):
 
     #makes fsl-style coregistration ANTS compatible
     fsl_reg_2_itk = pe.Node(
-        c3.C3dAffineTool(fsl2ras=True),
+        c3.C3dAffineTool(fsl2ras=True, itk_transform=True),
         name='fsl_reg_2_itk')
 
     #collects series of transformations to be applied to the moving images
